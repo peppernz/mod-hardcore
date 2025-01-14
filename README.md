@@ -23,6 +23,4 @@ No sql needed.
 
 # To-Do
 - After reviving by angel or spell you keep dead but doesn't look like it, just force ghost form.
-- While being dead, stop guild, global chatting.
-- While being dead can't participate in groups.
 - Change client UI texts? like mak'gora duels? maybe.
