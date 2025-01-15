@@ -12,7 +12,6 @@ class HardcoreMode : public PlayerScript
 public:
     explicit HardcoreMode() : PlayerScript("mod-hardcore")
     {
-
     }
 
     void OnLogin(Player* player) override
@@ -33,6 +32,15 @@ public:
     void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
     {
         this->sendHarcoreStatus(player);
+    }
+
+    void OnPlayerJustDied(Player* player) override
+    {
+        if (getHardcoreEnabledForPlayer(player))
+        {
+            Group* group = player->GetGroup();
+            group->RemoveMember(player->GetGUID());
+        }
     }
 
     void OnPlayerReleasedGhost(Player* player) override
@@ -74,9 +82,12 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg) override
     {
+        if (player->IsGameMaster())
+        {
+            return true;
+        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
-            // ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't use chat."); // Keep commented
             return false;
         }
         return true;
@@ -84,9 +95,12 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Player* receiver) override
     {
+        if (player->IsGameMaster())
+        {
+            return true;
+        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't use chat.");
             return false;
         }
         return true;
@@ -94,9 +108,12 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Group* group) override
     {
+        if (player->IsGameMaster())
+        {
+            return true;
+        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't use chat.");
             return false;
         }
         return true;
@@ -104,9 +121,12 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Guild* guild) override
     {
+        if (player->IsGameMaster())
+        {
+            return true;
+        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't use chat.");
             return false;
         }
         return true;
@@ -114,9 +134,12 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Channel* channel) override
     {
+        if (player->IsGameMaster())
+        {
+            return true;
+        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't use chat.");
             return false;
         }
         return true;
@@ -168,8 +191,65 @@ private:
     }
 };
 
+class HardModeServerScript : ServerScript
+{
+public:
+    HardModeServerScript() : ServerScript("mod-hardcore")
+    {
+    }
+
+    bool CanPacketReceive(WorldSession* session, WorldPacket& packet) override
+    {
+        if (!sConfigMgr->GetOption<bool>("ModHardcore.Enable", false))
+        {
+            return true;
+        }
+
+        if (!session)
+        {
+            return true;
+        }
+
+        auto player = session->GetPlayer();
+        if (!player || !player->isDead())
+        {
+            return true;
+        }
+
+        if (player->GetLevel() >= sConfigMgr->GetOption<int>("ModHardcoreMinLevel.Enable", 1) && player->GetLevel() <= sConfigMgr->GetOption<int>("ModHardcoreMaxLevel.Enable", 79))
+        {
+            auto opCode = packet.GetOpcode();
+            switch (opCode)
+            {
+                case SMSG_RESURRECT_REQUEST:
+                    ChatHandler(player->GetSession()).PSendSysMessage("SMSG_RESURRECT_REQUEST");
+                    return false;
+                case CMSG_RESURRECT_RESPONSE:
+                    ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't get resurrected.");
+                    return false;
+                case SMSG_PRE_RESURRECT:
+                    ChatHandler(player->GetSession()).PSendSysMessage("SMSG_PRE_RESURRECT");
+                    return false;
+                case CMSG_HEARTH_AND_RESURRECT:
+                    ChatHandler(player->GetSession()).PSendSysMessage("CMSG_HEARTH_AND_RESURRECT");
+                    return false;
+                case CMSG_GM_RESURRECT:
+                    ChatHandler(player->GetSession()).PSendSysMessage("CMSG_RESURRECT_RESPONSE");
+                    if (!sConfigMgr->GetOption<bool>("ModHardcoreGMCanResurrect.Enable", false))
+                    {
+                        return false;
+                    }
+                    break;
+            }
+        }
+
+        return true;
+    }
+};
+
 
 void AddSC_mod_harcore()
 {
     new HardcoreMode();
+    new HardModeServerScript();
 }
