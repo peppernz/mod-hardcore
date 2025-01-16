@@ -1,7 +1,6 @@
 # Simple Hardcore Mod
 AzerothCore module to replicate hardcore mode. 
 Intended to be bizzlike but with some level configurations.
-Need some polishment but feedback is appreciated.
 
 # Configuration
 ModHardcore.Enable
@@ -26,5 +25,4 @@ Follow official guide: https://www.azerothcore.org/wiki/installation
 No sql needed.
 
 # To-Do
-- After reviving by angel or spell you keep dead but doesn't look like it, just force ghost form.
 - Change client UI texts? like mak'gora duels? maybe.
