@@ -6,6 +6,10 @@
 #include "Player.h"
 #include "Config.h"
 #include "Chat.h"
+#include "Log.h"
+#include <iostream>
+#include <fstream>
+using namespace std;
 
 class HardcoreMode : public PlayerScript
 {
@@ -20,7 +24,7 @@ public:
         {
             if (player->isDead())
             {
-                ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session. Light is not on your side, you can't revive anymore.");
+                ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session, so you are a permanent ghost, try to scare living people.");
             }
             else
             {
@@ -39,7 +43,11 @@ public:
         if (getHardcoreEnabledForPlayer(player))
         {
             Group* group = player->GetGroup();
-            group->RemoveMember(player->GetGUID());
+            if (group)
+            {
+                ChatHandler(player->GetSession()).PSendSysMessage("Leaving group... You can't be a part of living people anymore.");
+                group->RemoveMember(player->GetGUID());
+            }
         }
     }
 
@@ -47,7 +55,7 @@ public:
     {
         if (getHardcoreEnabledForPlayer(player))
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session. You'll be a ghost forever now...");
+            ChatHandler(player->GetSession()).PSendSysMessage("You'll be a ghost forever...");
             return;
         }
     }
@@ -56,7 +64,7 @@ public:
     {
         if (getHardcoreEnabledForPlayer(killed))
         {
-            ChatHandler(killed->GetSession()).PSendSysMessage("You died during hardcore session... Your killer must be proud.");
+            ChatHandler(killed->GetSession()).PSendSysMessage("Some player killed you... in hardcore.");
             return;
         }
     }
@@ -65,17 +73,18 @@ public:
     {
         if (getHardcoreEnabledForPlayer(killed))
         {
-            ChatHandler(killed->GetSession()).PSendSysMessage("You died during hardcore session... Skills issues.");
+            ChatHandler(killed->GetSession()).PSendSysMessage("You died during a hardcore session... Skills issues.");
             return;
         }
     }
 
     void OnPlayerResurrect(Player* player, float /*restore_percent*/, bool /*applySickness*/) override
-    {
+    { // We keep this function just to prevent some exploits for reviving
         if (getHardcoreEnabledForPlayer(player))
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't get revived.");
+            ChatHandler(player->GetSession()).PSendSysMessage("You can't get revived. Git Gud.");
             player->KillPlayer();
+            player->GetSession()->KickPlayer("Player died during a hardcore session.");
             return;
         }
     }
@@ -149,7 +158,7 @@ public:
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't invite players to a group.");
+            ChatHandler(player->GetSession()).PSendSysMessage("You can't invite players to a group while dead.");
             return false;
         }
         return true;
@@ -159,7 +168,7 @@ public:
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't be a part of a group.");
+            ChatHandler(player->GetSession()).PSendSysMessage("You can't be a part of a group.");
             return false;
         }
         return true;
@@ -221,20 +230,16 @@ public:
             auto opCode = packet.GetOpcode();
             switch (opCode)
             {
-                case SMSG_RESURRECT_REQUEST:
-                    ChatHandler(player->GetSession()).PSendSysMessage("SMSG_RESURRECT_REQUEST");
-                    return false;
-                case CMSG_RESURRECT_RESPONSE:
-                    ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session... You can't get resurrected.");
-                    return false;
-                case SMSG_PRE_RESURRECT:
-                    ChatHandler(player->GetSession()).PSendSysMessage("SMSG_PRE_RESURRECT");
-                    return false;
-                case CMSG_HEARTH_AND_RESURRECT:
-                    ChatHandler(player->GetSession()).PSendSysMessage("CMSG_HEARTH_AND_RESURRECT");
+                case SMSG_PRE_RESURRECT: // No idea
+                case CMSG_HEARTH_AND_RESURRECT: // No idea
+                case SMSG_RESURRECT_REQUEST: // No idea, maybe never executed here because you can't send resurrect to anybody while dead
+                case CMSG_RECLAIM_CORPSE: // Reviving going to corpse
+                case CMSG_RESURRECT_RESPONSE: // Someone reviving your corpse
+                case CMSG_SPIRIT_HEALER_ACTIVATE: // Spirit talking
+                case SMSG_SPIRIT_HEALER_CONFIRM: // Spirit reviving, keep both spirit packets
+                    ChatHandler(player->GetSession()).PSendSysMessage("You can't get resurrected. Travel as a ghost or create a new Hero.");
                     return false;
                 case CMSG_GM_RESURRECT:
-                    ChatHandler(player->GetSession()).PSendSysMessage("CMSG_RESURRECT_RESPONSE");
                     if (!sConfigMgr->GetOption<bool>("ModHardcoreGMCanResurrect.Enable", false))
                     {
                         return false;
