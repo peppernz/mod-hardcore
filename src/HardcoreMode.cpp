@@ -35,7 +35,10 @@ public:
 
     void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
     {
-        this->sendHarcoreStatus(player);
+        if (getHardcoreEnabledForPlayer(player))
+        {
+            this->sendHarcoreStatus(player);
+        }
     }
 
     void OnPlayerJustDied(Player* player) override
@@ -195,8 +198,8 @@ private:
             {
                 return true;
             }
-            return false;
         }
+        return false;
     }
 };
 
