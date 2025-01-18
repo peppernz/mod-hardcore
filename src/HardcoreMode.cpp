@@ -6,10 +6,6 @@
 #include "Player.h"
 #include "Config.h"
 #include "Chat.h"
-#include "Log.h"
-#include <iostream>
-#include <fstream>
-using namespace std;
 
 class HardcoreMode : public PlayerScript
 {
@@ -94,10 +90,6 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg) override
     {
-        if (player->IsGameMaster())
-        {
-            return true;
-        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
             return false;
@@ -107,10 +99,6 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Player* receiver) override
     {
-        if (player->IsGameMaster())
-        {
-            return true;
-        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
             return false;
@@ -120,10 +108,6 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Group* group) override
     {
-        if (player->IsGameMaster())
-        {
-            return true;
-        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
             return false;
@@ -133,10 +117,6 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Guild* guild) override
     {
-        if (player->IsGameMaster())
-        {
-            return true;
-        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
             return false;
@@ -146,10 +126,6 @@ public:
 
     bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Channel* channel) override
     {
-        if (player->IsGameMaster())
-        {
-            return true;
-        }
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
             return false;
@@ -180,6 +156,10 @@ public:
 private:
     void sendHarcoreStatus(Player* player)
     {
+        if (player->IsGameMaster())
+        {
+            return;
+        }
         if (this->getHardcoreEnabledForPlayer(player))
         {
             ChatHandler(player->GetSession()).PSendSysMessage("Hardcore is now ENABLED...");
@@ -192,7 +172,7 @@ private:
 
     bool getHardcoreEnabledForPlayer(Player* player)
     {
-        if (sConfigMgr->GetOption<bool>("ModHardcore.Enable", false))
+        if (!player->IsGameMaster() && sConfigMgr->GetOption<bool>("ModHardcore.Enable", false))
         {
             if (player->GetLevel() >= sConfigMgr->GetOption<int>("ModHardcoreMinLevel.Enable", 1) && player->GetLevel() <= sConfigMgr->GetOption<int>("ModHardcoreMaxLevel.Enable", 79))
             {
@@ -223,7 +203,7 @@ public:
         }
 
         auto player = session->GetPlayer();
-        if (!player || !player->isDead())
+        if (!player || !player->isDead() || player->IsGameMaster())
         {
             return true;
         }
