@@ -14,7 +14,7 @@ public:
     {
     }
 
-    void OnLogin(Player* player) override
+    void OnPlayerLogin(Player* player) override
     {
         if (getHardcoreEnabledForPlayer(player))
         {
@@ -29,7 +29,7 @@ public:
         }
     }
 
-    void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
+    void OnPlayerLevelChanged(Player* player, uint8 /*oldlevel*/) override
     {
         if (getHardcoreEnabledForPlayer(player))
         {
@@ -59,7 +59,7 @@ public:
         }
     }
 
-    void OnPVPKill(Player* /*killer*/, Player* killed) override
+    void OnPlayerPVPKill(Player* /*killer*/, Player* killed) override
     {
         if (getHardcoreEnabledForPlayer(killed))
         {
@@ -88,7 +88,7 @@ public:
         }
     }
 
-    bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg) override
+    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 language, std::string& msg) override
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
@@ -97,7 +97,7 @@ public:
         return true;
     }
 
-    bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Player* receiver) override
+    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Player* receiver) override
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
@@ -106,7 +106,7 @@ public:
         return true;
     }
 
-    bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Group* group) override
+    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Group* group) override
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
@@ -115,7 +115,7 @@ public:
         return true;
     }
 
-    bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Guild* guild) override
+    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Guild* guild) override
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
@@ -124,7 +124,7 @@ public:
         return true;
     }
 
-    bool CanPlayerUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Channel* channel) override
+    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Channel* channel) override
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
@@ -133,7 +133,7 @@ public:
         return true;
     }
 
-    bool CanGroupInvite(Player* player, std::string& membername) override
+    bool OnPlayerCanGroupInvite(Player* player, std::string& membername) override
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
@@ -143,7 +143,7 @@ public:
         return true;
     }
 
-    bool CanGroupAccept(Player* player, Group* group) override
+    bool OnPlayerCanGroupAccept(Player* player, Group* group) override
     {
         if (getHardcoreEnabledForPlayer(player) && player->isDead())
         {
