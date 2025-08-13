@@ -2,6 +2,15 @@
 AzerothCore module to replicate hardcore mode. 
 Intended to be bizzlike but with some level configurations.
 
+# This Fork
+Hardcore mode can now be opted out of, every new player receives a token item which keeps them in hardcore mode.
+
+Players can be resurrected by other players or the spirit guardian but will lose their hardcore status. No running back to your corpse and reviving
+
+A recurrected player is never the same, you will acquire undead racials and lose most of your given ones.
+
+This fork does depend on Playerbots version of Azerothcore. By default player bots are also hardcore. (will make this configurable in future)
+
 # Configuration
 ModHardcore.Enable
 - Description: Enable Hardcore Mod.

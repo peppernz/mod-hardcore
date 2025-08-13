@@ -28,6 +28,7 @@
 #
 
 ModHardcore.Enable = 1
-ModHardcoreMinLevel.Enable = 10
+ModHardcore.TokenItemId = 11100 
+ModHardcoreMinLevel.Enable = 3
 ModHardcoreMaxLevel.Enable = 79
 ModHardcoreGMCanResurrect.Enable = 0
