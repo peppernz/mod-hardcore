@@ -11,6 +11,8 @@ A recurrected player is never the same, you will acquire undead racials and lose
 
 This fork does depend on Playerbots version of Azerothcore. By default player bots are also hardcore. (will make this configurable in future)
 
+Player deaths and major level up milestones are announced to the world.
+
 # Configuration
 ModHardcore.Enable
 - Description: Enable Hardcore Mod.
