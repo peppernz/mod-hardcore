@@ -9,10 +9,39 @@
 #include "Player.h"
 #include "Config.h"
 #include "Chat.h"
+#include "Corpse.h"
+
+namespace HardcoreHelper
+{
+    const uint32 DEFAULT_TOKEN_ID = 11100;
+
+    bool GetHardcoreEnabledForPlayer(Player* player)
+    {
+        if (player->IsGameMaster() || (sConfigMgr->GetOption<bool>("ModHardcore.Enable", false) == false))
+        {
+            return false;
+        }
+        if ((sConfigMgr->GetOption<bool>("ModHardcore.AllowHardcorePlayerBots", false) == false) && player->GetSession()->IsBot())
+        {
+            return false;
+        }
+
+        if (player->GetLevel() >= sConfigMgr->GetOption<int>("ModHardcore.StartLevel", 1) &&
+                player->GetLevel() <= sConfigMgr->GetOption<int>("ModHardcore.EndLevel", 80))
+        {
+            uint32 hcTokenItem = sConfigMgr->GetOption<int>("ModHardcore.TokenItemId", DEFAULT_TOKEN_ID);
+            if (player->HasItemCount(hcTokenItem, 1, true))
+            {
+                return true;
+            }
+        
+        }
+        return false;
+    }
+}
 
 class HardcoreMode : public PlayerScript
 {
-    const uint32 DEFAULT_TOKEN_ID = 11100;
 public:
     explicit HardcoreMode() : PlayerScript("mod_hardcore")
     {
@@ -20,50 +49,80 @@ public:
 
     void OnPlayerFirstLogin(Player* player) override
     {
-        uint32 hcTokenItem = sConfigMgr->GetOption<int>("ModHardcore.TokenItemId", DEFAULT_TOKEN_ID);
-        player->AddItem(hcTokenItem, 1);
+        if (sConfigMgr->GetOption<bool>("ModHardcore.Enable", false)) {
+            uint32 hcTokenItem = sConfigMgr->GetOption<int>("ModHardcore.TokenItemId", HardcoreHelper::DEFAULT_TOKEN_ID);
+            if (!player->HasItemCount(hcTokenItem, 1, true)) {
+                player->AddItem(hcTokenItem, 1);
+            }
+            SendHardcoreStatus(player);
+        }
     }
 
     void OnPlayerLogin(Player* player) override
     {
-        if (getHardcoreEnabledForPlayer(player))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
             if (player->isDead())
             {
                 ChatHandler(player->GetSession()).PSendSysMessage("You died during hardcore session, so you are a permanent ghost.");
             }
-            else
-            {
-                this->sendHarcoreStatus(player);
-            }
+        }
+        if (sConfigMgr->GetOption<bool>("ModHardcore.Enable", false)) {
+            SendHardcoreStatus(player);
         }
     }
 
     void OnPlayerLevelChanged(Player* player, uint8 /*oldlevel*/) override
     {
-        if (getHardcoreEnabledForPlayer(player))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
-            //this->sendHarcoreStatus(player);
             int level = player->GetLevel();
+            SendWorldAnnouncement(Acore::StringFormat("[DEBUG]{} has made it to level {}!", player->GetName(), level));
+            int maxLevel = sConfigMgr->GetOption<int>("ModHardcore.EndLevel", 80);
             if (level == 10) {
-                sendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
             } else if (level == 20) {
-                sendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
             } else if (level == 30) {
-                sendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
             } else if (level == 40) {
-                sendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
             } else if (level == 50) {
-                sendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 60) {
-                sendWorldAnnouncement(Acore::StringFormat("{} is a legend and is now level {}!!", player->GetName(), level));
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+            } else if (level == 60 && level < maxLevel) {
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+            } else if (level == 70 && level < maxLevel) {
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+            } else if (level == 80 && level < maxLevel) {
+                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+            } else if (level == maxLevel) {
+                SendWorldAnnouncement(Acore::StringFormat("{} knows no defeat at level {}! Congratulations!", player->GetName(), level));
             }
+            UpdateAchievement(player);
         }
     }
 
-    void OnPlayerJustDied(Player* /*player*/) override
+
+
+    void OnPlayerJustDied(Player* player) override
     {
-        // if (getHardcoreEnabledForPlayer(player))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
+        {
+            if (sConfigMgr->GetOption<bool>("ModHardcore.DestroyEquipmentOnDeath", true)) {
+                for (uint8 i = 0; i < EQUIPMENT_SLOT_END; ++i)
+                {
+                    if (Item* pItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                    {
+                        if (pItem->GetTemplate() && !pItem->IsEquipped())
+                            continue;
+                        uint8 slot = pItem->GetSlot();
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffDA70D6You have lost your |cffffffff|Hitem:%d:0:0:0:0:0:0:0:0|h[%s]|h|r", pItem->GetEntry(), pItem->GetTemplate()->Name1.c_str());
+                        player->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+                    }
+                }
+                player->SetMoney(0);
+            }
+        }
         // {
         //     Group* group = player->GetGroup();
         //     if (group)
@@ -76,7 +135,7 @@ public:
 
     void OnPlayerReleasedGhost(Player* player) override
     {
-        if (getHardcoreEnabledForPlayer(player))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
             ChatHandler(player->GetSession()).PSendSysMessage("You'll be a ghost forever...unless you find help");
             return;
@@ -85,83 +144,70 @@ public:
 
     void OnPlayerPVPKill(Player* killer, Player* killed) override
     {
-        if (getHardcoreEnabledForPlayer(killed))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(killed))
         {
             ChatHandler(killed->GetSession()).PSendSysMessage("You have died in Hardcore mode.");
-            if (killed->GetGUID() != killer->GetGUID())
+            if (killed->GetName() != killer->GetName())
             {
-                sendWorldAnnouncement(Acore::StringFormat("Hardcore level {} player {} was killed in a dual to the death by {}!", killed->GetLevel(), killed->GetName(), killer->GetName()));
+                SendWorldAnnouncement(Acore::StringFormat("Hardcore level {} player {} was killed in a dual to the death by {}!", killed->GetLevel(), killed->GetPlayerName(), killer->GetPlayerName()));
             }
         }
     }
 
     void OnPlayerKilledByCreature(Creature* killer, Player* killed) override
     {
-        if (getHardcoreEnabledForPlayer(killed))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(killed))
         {
-            sendWorldAnnouncement(Acore::StringFormat("Hardcore level {} player {} was killed by {}!", killed->GetLevel(), killed->GetName(), killer->GetName()));
-            ChatHandler(killed->GetSession()).PSendSysMessage("You died during a hardcore session...");
+            SendWorldAnnouncement(Acore::StringFormat("Hardcore level {} player {} was killed by {}!", killed->GetLevel(), killed->GetPlayerName(), killer->GetName()));
+            ChatHandler(killed->GetSession()).PSendSysMessage("You have died in Hardcore mode.");
             return;
         }
     }
 
     void OnPlayerResurrect(Player* player, float /*restore_percent*/, bool /*applySickness*/) override
     { // We keep this function just to prevent some exploits for reviving
-        if (getHardcoreEnabledForPlayer(player))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("You have been revived while playing hardcore. Hardcore mode is now off. You are forsaken.");
+            if (!sConfigMgr->GetOption<bool>("ModHardcore.AllowPlayerRez", false) || !sConfigMgr->GetOption<bool>("ModHardcore.AllowSpiritRez", false)) {
+                player->KillPlayer();
+                return;
+            }
             return;
         }
     }
 
     bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/) override
     {
-        if (getHardcoreEnabledForPlayer(player) && player->isDead())
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player) && player->isDead())
         {
             return false;
         }
         return true;
     }
 
-    bool OnPlayerCanUseChat(Player* /*player*/, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/, Player* /*receiver*/) override
-    {
-        //if (getHardcoreEnabledForPlayer(player) && player->isDead())
-        //{
-        //    return false;
-        //}
-        return true;
+    bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/, Player* /*receiver*/) override
+    {        
+        return CanUseChat(player);
     }
 
-    bool OnPlayerCanUseChat(Player* /*player*/, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/, Group* /*group*/) override
+    bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/, Group* /*group*/) override
     {
-        //if (getHardcoreEnabledForPlayer(player) && player->isDead())
-        //{
-        //    return false;
-        //}
-        return true;
+        return CanUseChat(player);
     }
 
-    bool OnPlayerCanUseChat(Player* /*player*/, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/, Guild* /*guild*/) override
+    bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/, Guild* /*guild*/) override
     {
-        //if (getHardcoreEnabledForPlayer(player) && player->isDead())
-        //{
-        //    return false;
-        //}
-        return true;
+        return CanUseChat(player);
     }
 
     bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*language*/, std::string& /*msg*/, Channel* /*channel*/) override
     {
-        if (getHardcoreEnabledForPlayer(player) && player->isDead())
-        {
-            return false;
-        }
-        return true;
+        return CanUseChat(player);
     }
 
     bool OnPlayerCanGroupInvite(Player* player, std::string& /*membername*/) override
     {
-        if (getHardcoreEnabledForPlayer(player) && player->isDead())
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player) && player->isDead())
         {
             ChatHandler(player->GetSession()).PSendSysMessage("You can't invite players to a group while dead.");
             return false;
@@ -171,7 +217,7 @@ public:
 
     bool OnPlayerCanGroupAccept(Player* player, Group* /*group*/) override
     {
-        if (getHardcoreEnabledForPlayer(player) && player->isDead())
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player) && player->isDead())
         {
             ChatHandler(player->GetSession()).PSendSysMessage("You can't be a part of a group.");
             return false;
@@ -181,63 +227,112 @@ public:
 
 private:
 
-    void sendWorldAnnouncement(std::string message)
+    bool CanUseChat(Player* player) {
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player) && player->isDead()) {
+            if (sConfigMgr->GetOption<bool>("ModHardcore.DisableChatWhenDead", false)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void SendWorldAnnouncement(std::string message)
     {
 
         // Send localized messages to all sessions
         ChatHandler(nullptr).DoForAllValidSessions([&](Player* player)
         {
-
-
             // Check if there is a localized message if not use default one.
             if (message.empty())
                 return;
-
             // Send the localized or fallback message
             ChatHandler(player->GetSession()).SendWorldTextOptional(message, ANNOUNCER_FLAG_DISABLE_AUTOBROADCAST);
         });
 
     }
 
-    void sendHarcoreStatus(Player* player)
+    void SendHardcoreStatus(Player* player)
     {
-        if (player->IsGameMaster())
+        if (player->IsGameMaster() || player->GetSession()->IsBot() || !sConfigMgr->GetOption<bool>("ModHardcore.Enable", false))
         {
             return;
         }
-        if (this->getHardcoreEnabledForPlayer(player))
+        if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
             ChatHandler(player->GetSession()).PSendSysMessage("Hardcore is enabled, good luck.");
         }
-    }
-
-    bool getHardcoreEnabledForPlayer(Player* player)
-    {
-        if (player->IsGameMaster()) 
-	{	       
-	    return false;
-	}	
-	if (sConfigMgr->GetOption<bool>("ModHardcore.Enable", false))
+        else 
         {
-            if (player->GetLevel() >= sConfigMgr->GetOption<int>("ModHardcoreMinLevel.Enable", 1) && player->GetLevel() <= sConfigMgr->GetOption<int>("ModHardcoreMaxLevel.Enable", 79))
-            {
-                // Has the HC item, will check bank
-	        uint32 hcTokenItem = sConfigMgr->GetOption<int>("ModHardcore.TokenItemId", DEFAULT_TOKEN_ID);
-                if (player->HasItemCount(hcTokenItem, 1, true)) 
-	        {
-		    return true;
-		} 
-            } 
+            ChatHandler(player->GetSession()).PSendSysMessage("Hardcore is disabled.");
         }
-        return false;
     }
 
+    void UpdateAchievement(Player* player) {
+        // ModHardcore.AchievementReward = "10 15006, 20 15007, 30 15008, 40 15009, 50 15010, 60 15011, 70 15012, 80 15013"
 
+        std::unordered_map<uint8, uint32>* achievementRewardMap = LoadStringToMap(sConfigMgr->GetOption<std::string>("ModHardcore.AchievementReward", ""));
+        //std::unordered_map<uint8, uint32>* titleRewardMap = LoadStringToMap(sConfigMgr->GetOption<std::string>("Hardcore.TitleReward", ""));
+        uint8 level = player->GetLevel();
+    
+        /*
+        if (MapContainsKey(titleRewardMap, level))
+        {
+            CharTitlesEntry const* titleInfo = sCharTitlesStore.LookupEntry(titleRewardMap->at(level));
+            if (!titleInfo)
+            {
+                LOG_ERROR("mod-hardcore", "Invalid title ID {}!", titleRewardMap->at(level));
+                return;
+            }
+            ChatHandler handler(player->GetSession());
+            std::string tNameLink = handler.GetNameLink(player);
+            std::string titleNameStr = Acore::StringFormat(player->getGender() == GENDER_MALE ? titleInfo->nameMale[handler.GetSessionDbcLocale()] : titleInfo->nameFemale[handler.GetSessionDbcLocale()], player->GetName());
+            player->SetTitle(titleInfo);
+        }
+        */
+
+    
+        if (MapContainsKey(achievementRewardMap, level))
+        {
+            AchievementEntry const* achievementInfo = sAchievementStore.LookupEntry(achievementRewardMap->at(level));
+            if (!achievementInfo)
+            {
+                LOG_ERROR("mod-hardcore", "Invalid Achievement ID {}!", achievementRewardMap->at(level));
+                return;
+            }
+    
+            ChatHandler handler(player->GetSession());
+            player->CompletedAchievement(achievementInfo);
+        }
+
+    }
+
+    bool MapContainsKey(const std::unordered_map<uint8, uint32>* mapToCheck, uint8 key)
+    {
+        return (mapToCheck->find(key) != mapToCheck->end());
+    }
+
+    std::unordered_map<uint8, uint32>*  LoadStringToMap(const std::string &configString)
+    {
+        std::unordered_map<uint8, uint32>* map = new std::unordered_map<uint8, uint32>();
+        std::string delimitedValue;
+        std::stringstream configIdStream;
+        configIdStream.str(configString);
+        // Process each config ID in the string, delimited by the comma - "," and then space " "
+        while (std::getline(configIdStream, delimitedValue, ','))
+        {
+            std::string pairOne, pairTwo;
+            std::stringstream configPairStream(delimitedValue);
+            configPairStream>>pairOne>>pairTwo;
+            auto configLevel = atoi(pairOne.c_str());
+            auto rewardValue = atoi(pairTwo.c_str());
+            (*map)[configLevel] = rewardValue;
+        }
+        return map;
+    }
 };
 
 class HardModeServerScript : ServerScript
 {
-    const uint32 DEFAULT_TOKEN_ID = 11100;
 public:
     HardModeServerScript() : ServerScript("mod_hardcore")
     {
@@ -256,17 +351,22 @@ public:
         }
 
         auto player = session->GetPlayer();
-        if (!player || !player->isDead() || player->IsGameMaster() || !getHardcoreEnabledForPlayer(player))
+        if (!player || !player->isDead() || player->IsGameMaster() || !HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
             return true;
         }
 
-        if (player->GetLevel() >= sConfigMgr->GetOption<int>("ModHardcoreMinLevel.Enable", 1) && player->GetLevel() <= sConfigMgr->GetOption<int>("ModHardcoreMaxLevel.Enable", 79))
+        if (player->GetLevel() >= sConfigMgr->GetOption<int>("ModHardcore.StartLevel", 1) && 
+        player->GetLevel() <= sConfigMgr->GetOption<int>("ModHardcore.EndLevel", 80))
         {
             auto opCode = packet.GetOpcode();
             switch (opCode)
             {
                 case SMSG_PRE_RESURRECT: // No idea
+                {
+                    ChatHandler(player->GetSession()).PSendSysMessage("SMSG_PRE_RESURRECT.");
+                    return false;
+                }
                 case CMSG_HEARTH_AND_RESURRECT: // No idea
                 case CMSG_RECLAIM_CORPSE:  // Reviving going to corpse
                 {
@@ -275,29 +375,30 @@ public:
                 }
                 case SMSG_RESURRECT_REQUEST:
                 case CMSG_RESURRECT_RESPONSE: // Someone reviving your corpse
+                {
+                    if (!sConfigMgr->GetOption<bool>("ModHardcore.AllowPlayerRez", false)) {
+                        return false;
+                    }
+                    RezPlayer(player, RezBy::PLAYER);
+                    return true;
+                }
                 case CMSG_SPIRIT_HEALER_ACTIVATE: // Spirit talking
                 case SMSG_SPIRIT_HEALER_CONFIRM: // Spirit reviving, keep both spirit packets
                 {
-                    ChatHandler(player->GetSession()).PSendSysMessage("If you accept being resurrected you will never be the same. Hardcore mode will be forfeited.");
-
-                    uint32 hcTokenItem = sConfigMgr->GetOption<int>("ModHardcore.TokenItemId", DEFAULT_TOKEN_ID);
-                    //Item* item = player->GetItemByEntry(hcTokenItem);
-                    player->DestroyItemCount(hcTokenItem, 1, true, true);
-                    //ObjectGuid itemGuid = item->GetGUID();
-                    //uint64 playerGuid = player->GetGUID()
-                    //std::string updateQuery = Acore::StringFormat("DELETE FROM `character_inventory` WHERE `item_guid` = {} AND `guid` = {};", itemGuid, playerGuid );
-                    //CharacterDatabase.Execute(updateQuery.c_str());
-
-                    makeUndead(player);
+                    if (!sConfigMgr->GetOption<bool>("ModHardcore.AllowSpiritRez", false)) {
+                        return false;
+                    }
+                    RezPlayer(player, RezBy::SPIRIT_HEALER);
                     return true;
                 }
                 case CMSG_GM_RESURRECT:
                 {
-                    if (!sConfigMgr->GetOption<bool>("ModHardcoreGMCanResurrect.Enable", false))
+                    if (!sConfigMgr->GetOption<bool>("ModHardcore.AllowGMRez", false))
                     {
                         return false;
                     }
-                    break;
+                    RezPlayer(player, RezBy::GM);
+                    return true;
                 }
             }
         }
@@ -306,31 +407,47 @@ public:
     }
 private:
 
-    // duplicate fn
-    bool getHardcoreEnabledForPlayer(Player* player)
-    {
-        if (player->IsGameMaster())
-        {
-            return false;
-        }
-        if (sConfigMgr->GetOption<bool>("ModHardcore.Enable", false))
-        {
-            if (player->GetLevel() >= sConfigMgr->GetOption<int>("ModHardcoreMinLevel.Enable", 1) && player->GetLevel() <= sConfigMgr->GetOption<int>("ModHardcoreMaxLevel.Enable", 79))
-            {
-                // Has the HC item, will check bank
-                uint32 hcTokenItem = sConfigMgr->GetOption<int>("ModHardcore.TokenItemId", DEFAULT_TOKEN_ID);
-                if (player->HasItemCount(hcTokenItem, 1, true))
-                {
-                    return true;
-                }
+    enum RezBy {
+        PLAYER,
+        SPIRIT_HEALER,
+        GM
+    };
+
+    void RezPlayer(Player* player, RezBy rezBy) {
+        if (rezBy == RezBy::GM) {
+            if (sConfigMgr->GetOption<bool>("ModHardcore.MakeUndeadOnGMRez", false) == true) {
+                ChatHandler(player->GetSession()).PSendSysMessage("If you accept being resurrected you will never be the same. Hardcore mode will be forfeited.");
+                MakeUndead(player);
+                DestroyHardcoreToken(player);
+            } else {
+                // Rez by GM does not reset hardcore mode. Use this in exceptional circumstances.
+                ChatHandler(player->GetSession()).PSendSysMessage("Your life has been fully restored.");
             }
+            return;
         }
-        return false;
+
+        if (sConfigMgr->GetOption<bool>("ModHardcore.MakeUndeadOnRez", true) == true) {
+            ChatHandler(player->GetSession()).PSendSysMessage("You have been resurrected. Hardcore mode is forfeit. You are forsaken.");
+            MakeUndead(player);
+        } else {
+            ChatHandler(player->GetSession()).PSendSysMessage("You have been resurrected. Hardcore mode is forfeit.");
+        }
+        DestroyHardcoreToken(player);
     }
 
-    void makeUndead(Player* player) {
+    void DestroyHardcoreToken(Player* player) {
+        uint32 hcTokenItem = sConfigMgr->GetOption<int>("ModHardcore.TokenItemId", HardcoreHelper::DEFAULT_TOKEN_ID);
+        player->DestroyItemCount(hcTokenItem, 1, true, true);
+    }
+
+
+    void MakeUndead(Player* player) {
 
         if (player->GetSession()->IsBot()) {
+            return;
+        }
+
+        if (sConfigMgr->GetOption<bool>("ModHardcore.MakeUndeadOnRez", true) == false) {
             return;
         }
 
