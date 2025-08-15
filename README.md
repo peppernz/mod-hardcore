@@ -21,6 +21,8 @@ Hardcore deaths are announced to the world!
 
 This fork depends on Playerbots fork of Azerothcore. By default player bots are also hardcore. 
 
+Player deaths and major level up milestones are announced to the world.
+
 # Configuration
 
 ## Core Settings
@@ -89,7 +91,7 @@ Examples:
 # Installation
 Follow official guide: https://www.azerothcore.org/wiki/installation
 
-No sql needed.
+Copy the custom base db_world SQL to the usual place for install. This script modifies an unused NPC item into the Hardcore token trinket.
 
 # To-Do
 - Change client UI texts? like mak'gora duels? maybe.
