@@ -76,29 +76,30 @@ public:
     {
         if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
-            int level = player->GetLevel();
-            SendWorldAnnouncement(Acore::StringFormat("[DEBUG]{} has made it to level {}!", player->GetName(), level));
-            int maxLevel = sConfigMgr->GetOption<int>("ModHardcore.EndLevel", 80);
-            if (level == 10) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 20) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 30) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 40) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 50) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 60 && level < maxLevel) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 70 && level < maxLevel) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == 80 && level < maxLevel) {
-                SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
-            } else if (level == maxLevel) {
-                SendWorldAnnouncement(Acore::StringFormat("{} knows no defeat at level {}! Congratulations!", player->GetName(), level));
+            if (sConfigMgr->GetOption<bool>("ModHardcore.AnnounceLevelUp", false)) {
+                int level = player->GetLevel();
+                int endLevel = sConfigMgr->GetOption<int>("ModHardcore.EndLevel", 80);
+                if (level == 10) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == 20) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == 30) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == 40) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == 50) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == 60 && level < endLevel) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == 70 && level < endLevel) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == 80 && level < endLevel) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} has made it to level {}!", player->GetName(), level));
+                } else if (level == endLevel) {
+                    SendWorldAnnouncement(Acore::StringFormat("{} knows no defeat at level {}! Congratulations!", player->GetName(), level));
+                }
             }
-            UpdateAchievement(player);
+            UpdateAchievementsAndTitles(player);
         }
     }
 
@@ -108,7 +109,7 @@ public:
     {
         if (HardcoreHelper::GetHardcoreEnabledForPlayer(player))
         {
-            if (sConfigMgr->GetOption<bool>("ModHardcore.DestroyEquipmentOnDeath", true)) {
+            if (sConfigMgr->GetOption<bool>("ModHardcore.DestroyEquipmentOnDeath", true) && !player->GetSession()->IsBot()) {
                 for (uint8 i = 0; i < EQUIPMENT_SLOT_END; ++i)
                 {
                     if (Item* pItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
@@ -122,15 +123,20 @@ public:
                 }
                 player->SetMoney(0);
             }
+            // Delete PLayerbot on Death
+            if (sConfigMgr->GetOption<bool>("ModHardcore.AllowHardcorePlayerBots", false) && player->GetSession()->IsBot()) {
+                player->GetSession()->LogoutPlayer(true);
+                
+                //Get world session
+                // WorldSession* session = player->GetSession();
+                // if (session) {
+                //     WorldPacket packet;
+                //     packet << player->GetGUID();    
+                //     session->HandleCharDeleteOpcode(packet);
+                //     LOG_ERROR("mod-hardcore", "Deleted player bot {}!", player->GetName());
+                // }
+            }
         }
-        // {
-        //     Group* group = player->GetGroup();
-        //     if (group)
-        //     {
-        //         ChatHandler(player->GetSession()).PSendSysMessage("Leaving group... You can't be a part of living people anymore.");
-        //         group->RemoveMember(player->GetGUID());
-        //     }
-        // }
     }
 
     void OnPlayerReleasedGhost(Player* player) override
@@ -267,14 +273,12 @@ private:
         }
     }
 
-    void UpdateAchievement(Player* player) {
-        // ModHardcore.AchievementReward = "10 15006, 20 15007, 30 15008, 40 15009, 50 15010, 60 15011, 70 15012, 80 15013"
+    void UpdateAchievementsAndTitles(Player* player) {
 
         std::unordered_map<uint8, uint32>* achievementRewardMap = LoadStringToMap(sConfigMgr->GetOption<std::string>("ModHardcore.AchievementReward", ""));
-        //std::unordered_map<uint8, uint32>* titleRewardMap = LoadStringToMap(sConfigMgr->GetOption<std::string>("Hardcore.TitleReward", ""));
+        std::unordered_map<uint8, uint32>* titleRewardMap = LoadStringToMap(sConfigMgr->GetOption<std::string>("ModHardcore.TitleReward", ""));
         uint8 level = player->GetLevel();
     
-        /*
         if (MapContainsKey(titleRewardMap, level))
         {
             CharTitlesEntry const* titleInfo = sCharTitlesStore.LookupEntry(titleRewardMap->at(level));
@@ -288,22 +292,20 @@ private:
             std::string titleNameStr = Acore::StringFormat(player->getGender() == GENDER_MALE ? titleInfo->nameMale[handler.GetSessionDbcLocale()] : titleInfo->nameFemale[handler.GetSessionDbcLocale()], player->GetName());
             player->SetTitle(titleInfo);
         }
-        */
 
-    
         if (MapContainsKey(achievementRewardMap, level))
         {
-            AchievementEntry const* achievementInfo = sAchievementStore.LookupEntry(achievementRewardMap->at(level));
+            uint32 achievementId = achievementRewardMap->at(level);
+            AchievementEntry const* achievementInfo = sAchievementStore.LookupEntry(achievementId);
             if (!achievementInfo)
             {
-                LOG_ERROR("mod-hardcore", "Invalid Achievement ID {}!", achievementRewardMap->at(level));
+                LOG_ERROR("mod-hardcore", "Invalid Achievement ID {}!", achievementId);
                 return;
             }
     
             ChatHandler handler(player->GetSession());
             player->CompletedAchievement(achievementInfo);
         }
-
     }
 
     bool MapContainsKey(const std::unordered_map<uint8, uint32>* mapToCheck, uint8 key)
