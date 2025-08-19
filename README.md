@@ -93,14 +93,38 @@ ModHardcore.TitleReward = "60 178, 70 179, 80 180"
 
 
 # Installation
-Follow official guide: https://www.azerothcore.org/wiki/installation
+Official module install guide:https://www.azerothcore.org/wiki/installing-a-module
 
-Copy the custom base db_world SQL to the usual place for install. This script modifies an unused NPC item into the Hardcore token trinket.
+** Clone and build
+
+- clone into you azerothcore modules folder
+git clone https://github.com/peppernz/mod-hardcore.git
+
+- cd to you build folder and start the build for the worldserver
+
+** Database update
+
+This script modifies an unused NPC item into the Hardcore token trinket.
+
+- check the follow file, you may want to update the name or description. if by some chance you've already allocated 11100 to another custom
+  item you'll need to edit the script and the conf file to reflect this.
+- copy the modules/mod-hardcore/data/sql/db-world/base/create_hc_item_11100.sql to your worldserver data/sql/ or apply to database directly.
+  
+** Dbc updates on server
+
+For achievements there are 2 patches in mod-hardcore/data/dbc/patches with new achievements. These are optional but you'll need to update the conf to reflect any changes.
+The new achievements start at id 15000 to try not to conflict with other modules.
+
+** Titles
+
+It is best to create you own title/titles by using a DBC editor. (I use MyDbcEditor.exe on linux)
+The procedure is to juts copy the last entry and edit the new one with your new title name. In the conf file the default title setup is for
+title at level 60, 70 then 80 which will be id 178, 179 and 180 if you haven't added titles before. Otherwise your ids will be different
+and you'll need to make sure the conf file reflects that (or if you just want a single title)
+
 
 # To-Do
-- Provide DBC / patch for achievements and titles
-- Improve Instructions
-- Fix buggy undead mode (requires dbc updates)
+- Fix buggy undead mode (requires dbc updates - for now don't enable it in your production instance)
 
 
 # Credits
