@@ -69,6 +69,12 @@ Examples:
 - Description: Make player undead on GM resurrection.
 - Default: 0 - Disabled, 1 - Enabled
 
+## On Death
+
+**ModHardcore.DestroyEquipmentOnDeath**
+- Description: Destroy equiped items and gold on death
+- Default: 0 - Disabled, 1 - Enabled
+
 ## Chat Settings
 
 **ModHardcore.DisableChatWhenDead**
